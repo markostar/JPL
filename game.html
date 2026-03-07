@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌍 Meine Traumwelt</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #87CEEB;
+      font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px;
+    }
+
+    h1 {
+      font-size: 2.2em;
+      color: #fff;
+      text-shadow: 3px 3px 0 #2a7a2a, -1px -1px 0 #2a7a2a;
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+    }
+
+    #toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 20px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      justify-content: center;
+    }
+
+    .tool-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f0f8ff;
+      border: 3px solid #ccc;
+      border-radius: 14px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 2em;
+      transition: transform 0.1s, border-color 0.1s, background 0.1s;
+      min-width: 70px;
+      user-select: none;
+    }
+
+    .tool-btn span {
+      font-size: 0.38em;
+      color: #555;
+      margin-top: 3px;
+      font-weight: bold;
+    }
+
+    .tool-btn:hover {
+      transform: scale(1.1);
+      background: #fffde7;
+    }
+
+    .tool-btn.active {
+      border-color: #ff6b00;
+      background: #fff3cd;
+      transform: scale(1.12);
+      box-shadow: 0 0 0 4px #ffd97066;
+    }
+
+    #canvas-wrapper {
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+      border: 4px solid #fff;
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    #info-bar {
+      margin-top: 10px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 12px;
+      padding: 6px 18px;
+      font-size: 1em;
+      color: #444;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    #clear-btn {
+      margin-top: 10px;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 10px 24px;
+      font-size: 1.1em;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #c0392b;
+      transition: transform 0.1s;
+    }
+    #clear-btn:hover { transform: scale(1.05); }
+    #clear-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #c0392b; }
+  </style>
+</head>
+<body>
+
+<h1>🌍 Meine Traumwelt</h1>
+
+<div id="toolbar">
+  <button class="tool-btn active" data-tile="grass"    >🌿<span>Gras</span></button>
+  <button class="tool-btn"        data-tile="water"    >💧<span>Wasser</span></button>
+  <button class="tool-btn"        data-tile="sand"     >🏖️<span>Sand</span></button>
+  <button class="tool-btn"        data-tile="tree"     >🌲<span>Wald</span></button>
+  <button class="tool-btn"        data-tile="flower"   >🌸<span>Blumen</span></button>
+  <button class="tool-btn"        data-tile="house"    >🏠<span>Haus</span></button>
+  <button class="tool-btn"        data-tile="road"     >🛣️<span>Straße</span></button>
+  <button class="tool-btn"        data-tile="mountain" >⛰️<span>Berg</span></button>
+  <button class="tool-btn"        data-tile="farm"     >🌾<span>Bauernhof</span></button>
+  <button class="tool-btn"        data-tile="castle"   >🏰<span>Schloss</span></button>
+  <button class="tool-btn"        data-tile="sun"      >☀️<span>Sonne</span></button>
+  <button class="tool-btn"        data-tile="rainbow"  >🌈<span>Regenbogen</span></button>
+</div>
+
+<div id="canvas-wrapper">
+  <canvas id="gameCanvas"></canvas>
+</div>
+
+<div id="info-bar">
+  Ausgewählt: <strong id="selected-name">Gras</strong> &nbsp;|&nbsp;
+  Klicke oder ziehe auf die Welt zum Bauen! 🎨
+</div>
+
+<button id="clear-btn">🗑️ Neu anfangen</button>
+
+<script>
+// ─── Einstellungen ───────────────────────────────────────────────────────────
+const COLS = 30;
+const ROWS = 20;
+const TILE = 40;
+
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+canvas.width  = COLS * TILE;
+canvas.height = ROWS * TILE;
+
+// ─── Tile-Definitionen ───────────────────────────────────────────────────────
+const TILES = {
+  grass:    { emoji: '🌿', bg: '#6abf45', label: 'Gras' },
+  water:    { emoji: '💧', bg: '#4fc3f7', label: 'Wasser' },
+  sand:     { emoji: '🏖️', bg: '#f9d77e', label: 'Sand' },
+  tree:     { emoji: '🌲', bg: '#2e7d32', label: 'Wald' },
+  flower:   { emoji: '🌸', bg: '#a5d6a7', label: 'Blumen' },
+  house:    { emoji: '🏠', bg: '#ef9a9a', label: 'Haus' },
+  road:     { emoji: '🛣️', bg: '#b0bec5', label: 'Straße' },
+  mountain: { emoji: '⛰️', bg: '#a1887f', label: 'Berg' },
+  farm:     { emoji: '🌾', bg: '#fff176', label: 'Bauernhof' },
+  castle:   { emoji: '🏰', bg: '#ce93d8', label: 'Schloss' },
+  sun:      { emoji: '☀️', bg: '#ffe082', label: 'Sonne' },
+  rainbow:  { emoji: '🌈', bg: '#b3e5fc', label: 'Regenbogen' },
+};
+
+// ─── Spielzustand ────────────────────────────────────────────────────────────
+let grid = [];
+let selectedTile = 'grass';
+let isPainting = false;
+
+function initGrid() {
+  grid = [];
+  for (let r = 0; r < ROWS; r++) {
+    grid[r] = [];
+    for (let c = 0; c < COLS; c++) {
+      grid[r][c] = 'grass';
+    }
+  }
+}
+
+// ─── Zeichnen ────────────────────────────────────────────────────────────────
+const emojiCache = {};
+
+function drawTile(c, r, tileKey) {
+  const tile = TILES[tileKey];
+  const x = c * TILE;
+  const y = r * TILE;
+
+  // Hintergrundfarbe
+  ctx.fillStyle = tile.bg;
+  ctx.fillRect(x, y, TILE, TILE);
+
+  // Leichter Rahmen
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+
+  // Emoji
+  ctx.font = `${TILE * 0.72}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(tile.emoji, x + TILE / 2, y + TILE / 2 + 2);
+}
+
+function drawAll() {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      drawTile(c, r, grid[r][c]);
+    }
+  }
+}
+
+// ─── Interaktion ─────────────────────────────────────────────────────────────
+function tileFromEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (e.clientX - rect.left)  * scaleX;
+  const y = (e.clientY - rect.top)   * scaleY;
+  const c = Math.floor(x / TILE);
+  const r = Math.floor(y / TILE);
+  if (c >= 0 && c < COLS && r >= 0 && r < ROWS) return { c, r };
+  return null;
+}
+
+function paint(e) {
+  const pos = tileFromEvent(e);
+  if (!pos) return;
+  if (grid[pos.r][pos.c] === selectedTile) return;
+  grid[pos.r][pos.c] = selectedTile;
+  drawTile(pos.c, pos.r, selectedTile);
+}
+
+canvas.addEventListener('mousedown', e => { isPainting = true; paint(e); });
+canvas.addEventListener('mousemove', e => { if (isPainting) paint(e); });
+canvas.addEventListener('mouseup',   () => { isPainting = false; });
+canvas.addEventListener('mouseleave',() => { isPainting = false; });
+
+// Touch-Unterstützung (Tablet / iPad)
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  isPainting = true;
+  paint(e.touches[0]);
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (isPainting) paint(e.touches[0]);
+}, { passive: false });
+canvas.addEventListener('touchend', () => { isPainting = false; });
+
+// ─── Toolbar ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tool-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedTile = btn.dataset.tile;
+    document.getElementById('selected-name').textContent = TILES[selectedTile].label;
+  });
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  if (confirm('Willst du wirklich neu anfangen? 🤔')) {
+    initGrid();
+    drawAll();
+  }
+});
+
+// ─── Start ───────────────────────────────────────────────────────────────────
+initGrid();
+drawAll();
+</script>
+</body>
+</html>
